@@ -37,6 +37,7 @@ type CompliancePost struct {
 	PostProps      string
 	PostHashtags   string
 	PostFileIds    string
+	IsBot          bool
 }
 
 func CompliancePostHeader() []string {
@@ -64,6 +65,7 @@ func CompliancePostHeader() []string {
 		"PostProps",
 		"PostHashtags",
 		"PostFileIds",
+		"UserType",
 	}
 }
 
@@ -88,6 +90,10 @@ func (me *CompliancePost) Row() []string {
 		postUpdateAt = time.Unix(0, me.PostUpdateAt*int64(1000*1000)).Format(time.RFC3339)
 	}
 
+	userType := "user"
+	if me.IsBot {
+		userType = "bot"
+	}
 	return []string{
 		cleanComplianceStrings(me.TeamName),
 		cleanComplianceStrings(me.TeamDisplayName),
@@ -113,5 +119,6 @@ func (me *CompliancePost) Row() []string {
 		me.PostProps,
 		me.PostHashtags,
 		me.PostFileIds,
+		userType,
 	}
 }
