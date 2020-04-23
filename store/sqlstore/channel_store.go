@@ -3582,7 +3582,7 @@ func (s SqlChannelStore) UpdateSidebarChannelByPreference(preference *model.Pref
 		}
 	} else {
 		// otherwise - insert new channel into the apropriate category. ignore duplicate error
-		if _, err := s.GetReplica().Exec("INSERT INTO SidebarChannels (ChannelId, UserId, CategoryId) SELECT Id AS CategoryId, :UserId AS UserId, :ChannelId AS ChannelId, MAX(SidebarChannels.SortOrder)+10 FROM SidebarCategories INNER JOIN SidebarChannels ON SidebarChannels.CategoryId = SidebarCategories.Id WHERE SidebarCategories.Type=:CategoryType AND SidebarCategories.UserId=:UserId GROUP BY SidebarChannels.CategoryId", params); err != nil && !IsUniqueConstraintError(err, []string{"UserId"}) {
+		if _, err := s.GetReplica().Exec("INSERT INTO SidebarChannels (ChannelId, UserId, CategoryId, SortOrder) SELECT Id AS CategoryId, :UserId AS UserId, :ChannelId AS ChannelId, MAX(SidebarChannels.SortOrder)+10 FROM SidebarCategories INNER JOIN SidebarChannels ON SidebarChannels.CategoryId = SidebarCategories.Id WHERE SidebarCategories.Type=:CategoryType AND SidebarCategories.UserId=:UserId GROUP BY SidebarChannels.CategoryId", params); err != nil && !IsUniqueConstraintError(err, []string{"UserId"}) {
 			return model.NewAppError("SqlChannelStore.UpdateSidebarChannelByPreference", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
 		}
 	}
