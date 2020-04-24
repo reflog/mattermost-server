@@ -12,7 +12,7 @@ const (
 	SidebarCategoryChannels       SidebarCategoryType = "C"
 	SidebarCategoryDirectMessages SidebarCategoryType = "D"
 	SidebarCategoryFavorites      SidebarCategoryType = "F"
-	SidebarCategoryUser           SidebarCategoryType = "U"
+	SidebarCategoryCustom         SidebarCategoryType = "C"
 )
 
 type SidebarCategoryType string
@@ -54,6 +54,12 @@ func SidebarCategoryFromJson(data io.Reader) *SidebarCategoryWithChannels {
 	return o
 }
 
+func SidebarCategoriesFromJson(data io.Reader) []*SidebarCategoryWithChannels {
+	var o []*SidebarCategoryWithChannels
+	json.NewDecoder(data).Decode(&o)
+	return o
+}
+
 func OrderedSidebarCategoriesFromJson(data io.Reader) *OrderedSidebarCategories {
 	var o *OrderedSidebarCategories
 	json.NewDecoder(data).Decode(&o)
@@ -65,7 +71,7 @@ func (o SidebarCategoryWithChannels) ToJson() []byte {
 	return b
 }
 
-func (o SidebarCategoriesWithChannels) ToJson() []byte {
+func SidebarCategoryWithChannelsToJson(o []*SidebarCategoryWithChannels) []byte {
 	if b, err := json.Marshal(o); err != nil {
 		return []byte("[]")
 	} else {

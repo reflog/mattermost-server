@@ -1684,17 +1684,26 @@ func TestSidebarCategory(t *testing.T) {
 	basicChannel2 := th.CreateChannel(th.BasicTeam)
 	defer th.App.PermanentDeleteChannel(basicChannel2)
 	user := th.CreateUser()
-	cat, err := th.App.CreateSidebarCategory(user.Id, th.BasicTeam.Id, "TEST", []string{th.BasicChannel.Id, basicChannel2.Id, basicChannel2.Id})
+	catData := model.SidebarCategoryWithChannels{
+		SidebarCategory: model.SidebarCategory{
+			DisplayName: "TEST",
+		},
+		Channels: []string{th.BasicChannel.Id, basicChannel2.Id, basicChannel2.Id},
+	}
+	cat, err := th.App.CreateSidebarCategory(user.Id, th.BasicTeam.Id, &catData)
 	require.NotNil(t, err, "Should return error due to duplicate IDs")
-	cat, err = th.App.CreateSidebarCategory(user.Id, th.BasicTeam.Id, "TEST", []string{th.BasicChannel.Id, basicChannel2.Id})
+	catData.Channels = []string{th.BasicChannel.Id, basicChannel2.Id}
+	cat, err = th.App.CreateSidebarCategory(user.Id, th.BasicTeam.Id, &catData)
 	require.Nil(t, err, "Expected no error")
 	require.NotNil(t, cat, "Expected category object, got nil")
 
-	updatedCat, err := th.App.UpdateSidebarCategory(user.Id, th.BasicTeam.Id, cat.Id, "new name", []string{th.BasicChannel.Id})
+	cat.Channels = []string{th.BasicChannel.Id}
+	updatedCat, err := th.App.UpdateSidebarCategories(user.Id, th.BasicTeam.Id, []*model.SidebarCategoryWithChannels{cat})
 	require.Nil(t, err, "Expected no error")
 	require.NotNil(t, updatedCat, "Expected category object, got nil")
-	require.Len(t, updatedCat.Channels, 1)
-	require.Equal(t, updatedCat.Channels[0], th.BasicChannel.Id)
+	require.Len(t, updatedCat, 1)
+	require.Len(t, updatedCat[0].Channels, 1)
+	require.Equal(t, updatedCat[0].Channels[0], th.BasicChannel.Id)
 
 	err = th.App.UpdateSidebarCategoryOrder(user.Id, th.BasicTeam.Id, []string{th.BasicChannel.Id, basicChannel2.Id})
 	require.NotNil(t, err, "Should return error due to invalid order")

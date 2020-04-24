@@ -73,7 +73,7 @@ func newProgress(step ProgressStep) *Progress {
 	return progress
 }
 
-func (worker *Worker) runSidebarCategoriesPhase1Migration(lastDone string) (bool, string, *model.AppError) {
+func (worker *Worker) runSidebarCategoriesPhase2Migration(lastDone string) (bool, string, *model.AppError) {
 	var progress *Progress
 	if len(lastDone) == 0 {
 		progress = newProgress(STEP_CATEGORIES)
@@ -90,10 +90,10 @@ func (worker *Worker) runSidebarCategoriesPhase1Migration(lastDone string) (bool
 	switch progress.CurrentStep {
 	case STEP_CATEGORIES:
 		result, err = worker.app.Srv().Store.Channel().MigrateSidebarCategories(progress.LastTeamId, progress.LastUserId, worker.app.GetT())
-		nextStep = STEP_FAVORITES
+		nextStep = STEP_CHANNELS
 	case STEP_CHANNELS:
 		result, err = worker.app.Srv().Store.Channel().MigrateChannelsToSidebarChannels(progress.LastChannelId, progress.LastUserId, progress.LastSortOrder)
-		nextStep = STEP_FAVORITES
+		nextStep = STEP_DMS
 	case STEP_DMS:
 		result, err = worker.app.Srv().Store.Channel().MigrateDirectGroupMessagesToSidebarChannels(progress.LastChannelId, progress.LastUserId, progress.LastSortOrder)
 		nextStep = STEP_FAVORITES

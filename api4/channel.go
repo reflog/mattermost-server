@@ -35,6 +35,7 @@ func (api *API) InitChannel() {
 
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(getCategoriesForTeamForUser)).Methods("GET")
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(createCategoryForTeamForUser)).Methods("POST")
+	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(updateCategoriesForTeamForUser)).Methods("PUT")
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/order", api.ApiSessionRequired(getCategoryOrderForTeamForUser)).Methods("GET")
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/order", api.ApiSessionRequired(updateCategoryOrderForTeamForUser)).Methods("PUT")
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/{category_id:[A-Za-z0-9]+}", api.ApiSessionRequired(getCategoryForTeamForUser)).Methods("GET")
@@ -1732,8 +1733,11 @@ func getCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.Requ
 	if c.Err != nil {
 		return
 	}
-	auditRec := c.MakeAuditRecord("getCategoriesForTeamForUser", audit.Fail)
-	defer c.LogAuditRec(auditRec)
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
 
 	categories, err := c.App.GetSidebarCategories(c.Params.UserId, c.Params.TeamId)
 	if err != nil {
@@ -1741,7 +1745,6 @@ func getCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	auditRec.Success()
 	w.Write(categories.ToJson())
 }
 
@@ -1750,10 +1753,16 @@ func createCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 	if c.Err != nil {
 		return
 	}
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
 	auditRec := c.MakeAuditRecord("createCategoryForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
 	categoryCreateRequest := model.SidebarCategoryFromJson(r.Body)
-	category, appErr := c.App.CreateSidebarCategory(c.Params.UserId, c.Params.TeamId, categoryCreateRequest.DisplayName, categoryCreateRequest.Channels)
+	category, appErr := c.App.CreateSidebarCategory(c.Params.UserId, c.Params.TeamId, categoryCreateRequest)
 	if appErr != nil {
 		c.Err = appErr
 		return
@@ -1768,8 +1777,11 @@ func getCategoryOrderForTeamForUser(c *Context, w http.ResponseWriter, r *http.R
 	if c.Err != nil {
 		return
 	}
-	auditRec := c.MakeAuditRecord("getCategoriesForTeamForUser", audit.Fail)
-	defer c.LogAuditRec(auditRec)
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
 
 	order, err := c.App.GetSidebarCategoryOrder(c.Params.UserId, c.Params.TeamId)
 	if err != nil {
@@ -1777,7 +1789,6 @@ func getCategoryOrderForTeamForUser(c *Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	auditRec.Success()
 	w.Write([]byte(model.ArrayToJson(order)))
 }
 
@@ -1786,6 +1797,12 @@ func updateCategoryOrderForTeamForUser(c *Context, w http.ResponseWriter, r *htt
 	if c.Err != nil {
 		return
 	}
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
 	auditRec := c.MakeAuditRecord("updateCategoryOrderForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
 
@@ -1805,8 +1822,11 @@ func getCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Reques
 	if c.Err != nil {
 		return
 	}
-	auditRec := c.MakeAuditRecord("getCategoriesForTeamForUser", audit.Fail)
-	defer c.LogAuditRec(auditRec)
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
 
 	categories, err := c.App.GetSidebarCategory(c.Params.UserId, c.Params.TeamId, c.Params.CategoryId)
 	if err != nil {
@@ -1814,8 +1834,32 @@ func getCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	auditRec.Success()
 	w.Write(categories.ToJson())
+}
+
+func updateCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.Request) {
+	c.RequireUserId().RequireTeamId().RequireCategoryId()
+	if c.Err != nil {
+		return
+	}
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
+	auditRec := c.MakeAuditRecord("updateCategoriesForTeamForUser", audit.Fail)
+	defer c.LogAuditRec(auditRec)
+
+	categoriesUpdateRequest := model.SidebarCategoriesFromJson(r.Body)
+	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, categoriesUpdateRequest)
+	if appErr != nil {
+		c.Err = appErr
+		return
+	}
+
+	auditRec.Success()
+	w.Write(model.SidebarCategoryWithChannelsToJson(categories))
 }
 
 func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -1823,17 +1867,24 @@ func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 	if c.Err != nil {
 		return
 	}
+
+	if !c.App.SessionHasPermissionToUser(*c.App.Session(), c.Params.UserId) {
+		c.SetPermissionError(model.PERMISSION_EDIT_OTHER_USERS)
+		return
+	}
+
 	auditRec := c.MakeAuditRecord("updateCategoryForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
 
-	categoryCreateRequest := model.SidebarCategoryFromJson(r.Body)
+	categoryUpdateRequest := model.SidebarCategoryFromJson(r.Body)
+	categoryUpdateRequest.Id = c.Params.CategoryId
 
-	categories, appErr := c.App.UpdateSidebarCategory(c.Params.UserId, c.Params.TeamId, c.Params.CategoryId, categoryCreateRequest.DisplayName, categoryCreateRequest.Channels)
+	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, []*model.SidebarCategoryWithChannels{categoryUpdateRequest})
 	if appErr != nil {
 		c.Err = appErr
 		return
 	}
 
 	auditRec.Success()
-	w.Write(categories.ToJson())
+	w.Write(model.SidebarCategoryWithChannelsToJson(categories))
 }
