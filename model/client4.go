@@ -5007,23 +5007,31 @@ func (c *Client4) PatchChannelModerations(channelID string, patch []*ChannelMode
 
 func (c *Client4) GetSidebarCategoriesForTeamForUser(userID, teamID, etag string) (*OrderedSidebarCategories, *Response) {
 	route := fmt.Sprintf(c.GetUserRoute(userID) + c.GetTeamRoute(teamID) + "/channels/categories")
-	r, err := c.DoApiGet(route, etag)
-	if err != nil {
-		return nil, BuildErrorResponse(r, err)
+	r, appErr := c.DoApiGet(route, etag)
+	if appErr != nil {
+		return nil, BuildErrorResponse(r, appErr)
 	}
 	defer closeBody(r)
-	return OrderedSidebarCategoriesFromJson(r.Body), BuildResponse(r)
+	cat, err := OrderedSidebarCategoriesFromJson(r.Body)
+	if err != nil {
+		return nil, &Response{StatusCode: http.StatusBadRequest, Error: NewAppError(c.GetUserRoute(userID), "model.client.connecting.app_error", nil, err.Error(), http.StatusForbidden)}
+	}
+	return cat, BuildResponse(r)
 }
 
 func (c *Client4) CreateSidebarCategoryForTeamForUser(userID, teamID string, category *SidebarCategoryWithChannels) (*SidebarCategoryWithChannels, *Response) {
 	payload, _ := json.Marshal(category)
 	route := fmt.Sprintf(c.GetUserRoute(userID) + c.GetTeamRoute(teamID) + "/channels/categories")
-	r, err := c.doApiPostBytes(route, payload)
-	if err != nil {
-		return nil, BuildErrorResponse(r, err)
+	r, appErr := c.doApiPostBytes(route, payload)
+	if appErr != nil {
+		return nil, BuildErrorResponse(r, appErr)
 	}
 	defer closeBody(r)
-	return SidebarCategoryFromJson(r.Body), BuildResponse(r)
+	cat, err := SidebarCategoryFromJson(r.Body)
+	if err != nil {
+		return nil, &Response{StatusCode: http.StatusBadRequest, Error: NewAppError(c.GetUserRoute(userID), "model.client.connecting.app_error", nil, err.Error(), http.StatusForbidden)}
+	}
+	return cat, BuildResponse(r)
 }
 
 func (c *Client4) GetSidebarCategoryOrderForTeamForUser(userID, teamID, etag string) ([]string, *Response) {
@@ -5049,21 +5057,31 @@ func (c *Client4) UpdateSidebarCategoryOrderForTeamForUser(userID, teamID string
 
 func (c *Client4) GetSidebarCategoryForTeamForUser(userID, teamID, categoryID, etag string) (*SidebarCategoryWithChannels, *Response) {
 	route := fmt.Sprintf(c.GetUserRoute(userID) + c.GetTeamRoute(teamID) + "/channels/categories/" + categoryID)
-	r, err := c.DoApiGet(route, etag)
-	if err != nil {
-		return nil, BuildErrorResponse(r, err)
+	r, appErr := c.DoApiGet(route, etag)
+	if appErr != nil {
+		return nil, BuildErrorResponse(r, appErr)
 	}
 	defer closeBody(r)
-	return SidebarCategoryFromJson(r.Body), BuildResponse(r)
+	cat, err := SidebarCategoryFromJson(r.Body)
+	if err != nil {
+		return nil, &Response{StatusCode: http.StatusBadRequest, Error: NewAppError(c.GetUserRoute(userID), "model.client.connecting.app_error", nil, err.Error(), http.StatusForbidden)}
+	}
+
+	return cat, BuildResponse(r)
 }
 
 func (c *Client4) UpdateSidebarCategoryForTeamForUser(userID, teamID, categoryID string, category *SidebarCategoryWithChannels) (*SidebarCategoryWithChannels, *Response) {
 	payload, _ := json.Marshal(category)
 	route := fmt.Sprintf(c.GetUserRoute(userID) + c.GetTeamRoute(teamID) + "/channels/categories/" + categoryID)
-	r, err := c.doApiPutBytes(route, payload)
-	if err != nil {
-		return nil, BuildErrorResponse(r, err)
+	r, appErr := c.doApiPutBytes(route, payload)
+	if appErr != nil {
+		return nil, BuildErrorResponse(r, appErr)
 	}
 	defer closeBody(r)
-	return SidebarCategoryFromJson(r.Body), BuildResponse(r)
+	cat, err := SidebarCategoryFromJson(r.Body)
+	if err != nil {
+		return nil, &Response{StatusCode: http.StatusBadRequest, Error: NewAppError(c.GetUserRoute(userID), "model.client.connecting.app_error", nil, err.Error(), http.StatusForbidden)}
+	}
+
+	return cat, BuildResponse(r)
 }
