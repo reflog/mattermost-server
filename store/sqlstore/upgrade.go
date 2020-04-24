@@ -788,7 +788,8 @@ func upgradeDatabaseToVersion522(sqlStore SqlStore) {
 }
 
 func upgradeDatabaseToVersion523(sqlStore SqlStore) {
-	//if shouldPerformUpgrade(sqlStore, VERSION_5_22_0, VERSION_5_23_0) {
+	// TODO: uncomment when the time arrive to upgrade the DB for 5.23
+	// if shouldPerformUpgrade(sqlStore, VERSION_5_22_0, VERSION_5_23_0) {
 	// 	saveSchemaVersion(sqlStore, VERSION_5_23_0)
 	// }
 }

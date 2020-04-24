@@ -613,7 +613,7 @@ func (s *OpenTracingLayerChannelStore) CreateDirectChannel(userId *model.User, o
 	return resultVar0, resultVar1
 }
 
-func (s *OpenTracingLayerChannelStore) CreateSidebarCategory(userId string, teamId string, displayName string, channelIDs []string) (*model.SidebarCategoryWithChannels, *model.AppError) {
+func (s *OpenTracingLayerChannelStore) CreateSidebarCategory(userId string, teamId string, newCategory *model.SidebarCategoryWithChannels) (*model.SidebarCategoryWithChannels, *model.AppError) {
 	origCtx := s.Root.Store.Context()
 	span, newCtx := tracing.StartSpanWithParentByContext(s.Root.Store.Context(), "ChannelStore.CreateSidebarCategory")
 	s.Root.Store.SetContext(newCtx)
@@ -622,7 +622,7 @@ func (s *OpenTracingLayerChannelStore) CreateSidebarCategory(userId string, team
 	}()
 
 	defer span.Finish()
-	resultVar0, resultVar1 := s.ChannelStore.CreateSidebarCategory(userId, teamId, displayName, channelIDs)
+	resultVar0, resultVar1 := s.ChannelStore.CreateSidebarCategory(userId, teamId, newCategory)
 	if resultVar1 != nil {
 		span.LogFields(spanlog.Error(resultVar1))
 		ext.Error.Set(span, true)
@@ -2093,16 +2093,16 @@ func (s *OpenTracingLayerChannelStore) UpdateMultipleMembers(members []*model.Ch
 	return resultVar0, resultVar1
 }
 
-func (s *OpenTracingLayerChannelStore) UpdateSidebarCategory(userId string, teamId string, categoryId string, displayName string, channelIDs []string) (*model.SidebarCategoryWithChannels, *model.AppError) {
+func (s *OpenTracingLayerChannelStore) UpdateSidebarCategories(userId string, teamId string, categories []*model.SidebarCategoryWithChannels) ([]*model.SidebarCategoryWithChannels, *model.AppError) {
 	origCtx := s.Root.Store.Context()
-	span, newCtx := tracing.StartSpanWithParentByContext(s.Root.Store.Context(), "ChannelStore.UpdateSidebarCategory")
+	span, newCtx := tracing.StartSpanWithParentByContext(s.Root.Store.Context(), "ChannelStore.UpdateSidebarCategories")
 	s.Root.Store.SetContext(newCtx)
 	defer func() {
 		s.Root.Store.SetContext(origCtx)
 	}()
 
 	defer span.Finish()
-	resultVar0, resultVar1 := s.ChannelStore.UpdateSidebarCategory(userId, teamId, categoryId, displayName, channelIDs)
+	resultVar0, resultVar1 := s.ChannelStore.UpdateSidebarCategories(userId, teamId, categories)
 	if resultVar1 != nil {
 		span.LogFields(spanlog.Error(resultVar1))
 		ext.Error.Set(span, true)

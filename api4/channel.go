@@ -33,13 +33,13 @@ func (api *API) InitChannel() {
 	api.BaseRoutes.ChannelsForTeam.Handle("/search_autocomplete", api.ApiSessionRequired(autocompleteChannelsForTeamForSearch)).Methods("GET")
 	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels", api.ApiSessionRequired(getChannelsForTeamForUser)).Methods("GET")
 
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(getCategoriesForTeamForUser)).Methods("GET")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(createCategoryForTeamForUser)).Methods("POST")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories", api.ApiSessionRequired(updateCategoriesForTeamForUser)).Methods("PUT")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/order", api.ApiSessionRequired(getCategoryOrderForTeamForUser)).Methods("GET")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/order", api.ApiSessionRequired(updateCategoryOrderForTeamForUser)).Methods("PUT")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/{category_id:[A-Za-z0-9]+}", api.ApiSessionRequired(getCategoryForTeamForUser)).Methods("GET")
-	api.BaseRoutes.User.Handle("/teams/{team_id:[A-Za-z0-9]+}/channels/categories/{category_id:[A-Za-z0-9]+}", api.ApiSessionRequired(updateCategoryForTeamForUser)).Methods("PUT")
+	api.BaseRoutes.ChannelCategories.Handle("", api.ApiSessionRequired(getCategoriesForTeamForUser)).Methods("GET")
+	api.BaseRoutes.ChannelCategories.Handle("", api.ApiSessionRequired(createCategoryForTeamForUser)).Methods("POST")
+	api.BaseRoutes.ChannelCategories.Handle("", api.ApiSessionRequired(updateCategoriesForTeamForUser)).Methods("PUT")
+	api.BaseRoutes.ChannelCategories.Handle("/order", api.ApiSessionRequired(getCategoryOrderForTeamForUser)).Methods("GET")
+	api.BaseRoutes.ChannelCategories.Handle("/order", api.ApiSessionRequired(updateCategoryOrderForTeamForUser)).Methods("PUT")
+	api.BaseRoutes.ChannelCategories.Handle("/{category_id:[A-Za-z0-9]+}", api.ApiSessionRequired(getCategoryForTeamForUser)).Methods("GET")
+	api.BaseRoutes.ChannelCategories.Handle("/{category_id:[A-Za-z0-9]+}", api.ApiSessionRequired(updateCategoryForTeamForUser)).Methods("PUT")
 
 	api.BaseRoutes.Channel.Handle("", api.ApiSessionRequired(getChannel)).Methods("GET")
 	api.BaseRoutes.Channel.Handle("", api.ApiSessionRequired(updateChannel)).Methods("PUT")
@@ -1761,7 +1761,11 @@ func createCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 
 	auditRec := c.MakeAuditRecord("createCategoryForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
-	categoryCreateRequest := model.SidebarCategoryFromJson(r.Body)
+	categoryCreateRequest, err := model.SidebarCategoryFromJson(r.Body)
+	if err != nil {
+		c.SetInvalidParam("category")
+		return
+	}
 	category, appErr := c.App.CreateSidebarCategory(c.Params.UserId, c.Params.TeamId, categoryCreateRequest)
 	if appErr != nil {
 		c.Err = appErr
@@ -1851,7 +1855,12 @@ func updateCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.R
 	auditRec := c.MakeAuditRecord("updateCategoriesForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
 
-	categoriesUpdateRequest := model.SidebarCategoriesFromJson(r.Body)
+	categoriesUpdateRequest, err := model.SidebarCategoriesFromJson(r.Body)
+	if err != nil {
+		c.SetInvalidParam("category")
+		return
+	}
+
 	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, categoriesUpdateRequest)
 	if appErr != nil {
 		c.Err = appErr
@@ -1876,7 +1885,13 @@ func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 	auditRec := c.MakeAuditRecord("updateCategoryForTeamForUser", audit.Fail)
 	defer c.LogAuditRec(auditRec)
 
-	categoryUpdateRequest := model.SidebarCategoryFromJson(r.Body)
+	categoryUpdateRequest, err := model.SidebarCategoryFromJson(r.Body)
+
+	if err != nil {
+		c.SetInvalidParam("category")
+		return
+	}
+
 	categoryUpdateRequest.Id = c.Params.CategoryId
 
 	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, []*model.SidebarCategoryWithChannels{categoryUpdateRequest})
