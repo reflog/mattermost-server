@@ -1417,6 +1417,10 @@
     "translation": "Invalid username."
   },
   {
+    "id": "api.invalid_channel",
+    "translation": "Channel listed in the request doesn't belong to the user"
+  },
+  {
     "id": "api.io_error",
     "translation": "input/output error"
   },

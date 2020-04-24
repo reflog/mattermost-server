@@ -1766,6 +1766,10 @@ func createCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 		c.SetInvalidParam("category")
 		return
 	}
+	if appErr := validateUserChannels("createCategoryForTeamForUser", c, c.Params.TeamId, c.Params.UserId, categoryCreateRequest.Channels); appErr != nil {
+		c.Err = appErr
+		return
+	}
 	category, appErr := c.App.CreateSidebarCategory(c.Params.UserId, c.Params.TeamId, categoryCreateRequest)
 	if appErr != nil {
 		c.Err = appErr
@@ -1860,6 +1864,14 @@ func updateCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.R
 		c.SetInvalidParam("category")
 		return
 	}
+	var channelsToCheck []string
+	for _, category := range categoriesUpdateRequest {
+		channelsToCheck = append(channelsToCheck, category.Channels...)
+	}
+	if appErr := validateUserChannels("updateCategoriesForTeamForUser", c, c.Params.TeamId, c.Params.UserId, channelsToCheck); appErr != nil {
+		c.Err = appErr
+		return
+	}
 
 	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, categoriesUpdateRequest)
 	if appErr != nil {
@@ -1869,6 +1881,26 @@ func updateCategoriesForTeamForUser(c *Context, w http.ResponseWriter, r *http.R
 
 	auditRec.Success()
 	w.Write(model.SidebarCategoryWithChannelsToJson(categories))
+}
+
+func validateUserChannels(operationName string, c *Context, teamId, userId string, channelIDs []string) *model.AppError {
+	channels, err := c.App.GetChannelsForUser(teamId, userId, false)
+	if err != nil {
+		return model.NewAppError("Api4."+operationName, "api.invalid_channel", nil, err.Error(), http.StatusInternalServerError)
+	}
+	for _, channelId := range channelIDs {
+		found := false
+		for _, channel := range *channels {
+			if channel.Id == channelId {
+				found = true
+				break
+			}
+			if !found {
+				return model.NewAppError("Api4."+operationName, "api.invalid_channel", nil, err.Error(), http.StatusInternalServerError)
+			}
+		}
+	}
+	return nil
 }
 
 func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -1891,7 +1923,10 @@ func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 		c.SetInvalidParam("category")
 		return
 	}
-
+	if appErr := validateUserChannels("updateCategoryForTeamForUser", c, c.Params.TeamId, c.Params.UserId, categoryUpdateRequest.Channels); appErr != nil {
+		c.Err = appErr
+		return
+	}
 	categoryUpdateRequest.Id = c.Params.CategoryId
 
 	categories, appErr := c.App.UpdateSidebarCategories(c.Params.UserId, c.Params.TeamId, []*model.SidebarCategoryWithChannels{categoryUpdateRequest})
