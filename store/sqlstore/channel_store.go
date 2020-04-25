@@ -510,7 +510,7 @@ func (s SqlChannelStore) MigrateFavoritesToSidebarChannels(lastUserId string, ru
 			sq.Gt{"Preferences.UserId": lastUserId},
 		}).
 		LeftJoin("Channels ON (Channels.Id=Preferences.Name)").
-		LeftJoin("SidebarCategories ON (SidebarCategories.UserId=Preferences.UserId AND SidebarCategories.TeamId=Channels.TeamId AND SidebarCategories.Type='F')").
+		LeftJoin("SidebarCategories ON (SidebarCategories.UserId=Preferences.UserId AND SidebarCategories.Type='F' AND (SidebarCategories.TeamId=Channels.TeamId OR Channels.TeamId=''))").
 		OrderBy("Preferences.UserId", "Channels.Name DESC").
 		Limit(100)
 
@@ -3529,24 +3529,52 @@ func (s SqlChannelStore) UpdateSidebarCategories(userId, teamId string, categori
 			return nil, model.NewAppError("SqlPostStore.UpdateSidebarCategory", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
 		}
 
+		// clean previous favorites
 		sql, args, _ := s.getQueryBuilder().Delete("SidebarChannels").Where(sq.Eq{"ChannelId": oldCategory.Channels}).ToSql()
 
 		if _, err = transaction.Exec(sql, args...); err != nil {
 			return nil, model.NewAppError("SqlPostStore.UpdateSidebarCategory", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
 		}
+
+		if category.Type == model.SidebarCategoryFavorites {
+			// clean previous preference favorites (to support bi-directional sync)
+			sql, args, _ = s.getQueryBuilder().Delete("Preferences").Where(sq.And{
+				sq.Eq{"ChannelId": oldCategory.Channels},
+				sq.Eq{"Preferences.Category": model.PREFERENCE_CATEGORY_FAVORITE_CHANNEL},
+			}).ToSql()
+
+			if _, err = transaction.Exec(sql, args...); err != nil {
+				return nil, model.NewAppError("SqlPostStore.UpdateSidebarCategory", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
+			}
+		}
 		var channels []interface{}
+		var preferences []interface{}
 		runningOrder := 0
 		for _, channelID := range oldCategory.Channels {
 			channels = append(channels, &model.SidebarChannel{
 				ChannelId:  channelID,
-				CategoryId: oldCategory.Id,
+				CategoryId: category.Id,
 				SortOrder:  int64(runningOrder),
 				UserId:     userId,
 			})
+			preferences = append(preferences, &model.Preference{
+				Name:     channelID,
+				UserId:   userId,
+				Category: model.PREFERENCE_CATEGORY_FAVORITE_CHANNEL,
+				Value:    "true",
+			})
 			runningOrder += 10
 		}
+
 		if err = transaction.Insert(channels...); err != nil {
 			return nil, model.NewAppError("SqlPostStore.UpdateSidebarCategory", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
+
+		}
+
+		if category.Type == model.SidebarCategoryFavorites {
+			if err = transaction.Insert(preferences...); err != nil {
+				return nil, model.NewAppError("SqlPostStore.UpdateSidebarCategory", "store.sql_channel.sidebar_categories.app_error", nil, err.Error(), http.StatusInternalServerError)
+			}
 		}
 	}
 
@@ -3557,6 +3585,7 @@ func (s SqlChannelStore) UpdateSidebarCategories(userId, teamId string, categori
 	return categories, nil
 }
 
+// UpdateSidebarChannelByPreference is called when the Preference table is being updated to keep SidebarCategories in sync
 func (s SqlChannelStore) UpdateSidebarChannelByPreference(preference *model.Preference) *model.AppError {
 	if preference.Category != model.PREFERENCE_CATEGORY_DIRECT_CHANNEL_SHOW && preference.Category != model.PREFERENCE_CATEGORY_GROUP_CHANNEL_SHOW && preference.Category != model.PREFERENCE_CATEGORY_FAVORITE_CHANNEL {
 		return nil
