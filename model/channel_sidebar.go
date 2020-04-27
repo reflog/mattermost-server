@@ -8,15 +8,25 @@ import (
 	"io"
 )
 
+type SidebarCategoryType string
+
 const (
+	// Each sidebar category has a 'type'. System categories are Channels, Favorites and DMs
+	// All user-created categories will have type Custom
 	SidebarCategoryChannels       SidebarCategoryType = "C"
 	SidebarCategoryDirectMessages SidebarCategoryType = "D"
 	SidebarCategoryFavorites      SidebarCategoryType = "F"
-	SidebarCategoryCustom         SidebarCategoryType = "C"
+	SidebarCategoryCustom         SidebarCategoryType = "U"
+	// Increment to use when adding/reordering things in the sidebar
+	MinimalSidebarSortDistance = 10
+	// Default Sort Orders for categories
+	DefaultSidebarSortOrderFavorites = 0
+	DefaultSidebarSortOrderChannels  = DefaultSidebarSortOrderFavorites + MinimalSidebarSortDistance
+	DefaultSidebarSortOrderDMs       = DefaultSidebarSortOrderChannels + MinimalSidebarSortDistance
 )
 
-type SidebarCategoryType string
-
+// SidebarCategory represents the corresponding DB table
+// SortOrder is never returned to the user and only used for queries
 type SidebarCategory struct {
 	Id          string              `json:"id"`
 	UserId      string              `json:"user_id"`
@@ -26,6 +36,7 @@ type SidebarCategory struct {
 	DisplayName string              `json:"display_name"`
 }
 
+// SidebarCategoryWithChannels combines data from SidebarCategory table with the Channel IDs that belong to that category
 type SidebarCategoryWithChannels struct {
 	SidebarCategory
 	Channels []string `json:"channel_ids"`
@@ -33,6 +44,7 @@ type SidebarCategoryWithChannels struct {
 
 type SidebarCategoryOrder []string
 
+// OrderedSidebarCategories combines categories, their channel IDs and an array of Category IDs, sorted
 type OrderedSidebarCategories struct {
 	Categories SidebarCategoriesWithChannels `json:"categories"`
 	Order      SidebarCategoryOrder          `json:"order"`

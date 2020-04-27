@@ -15,11 +15,11 @@ import (
 type ProgressStep string
 
 const (
-	STEP_CATEGORIES ProgressStep = "populateSidebarCategories"
-	STEP_FAVORITES  ProgressStep = "migrateFavoriteChannelToSidebarChannels"
-	STEP_DMS        ProgressStep = "migrateDirectMessagesToSidebarChannels"
-	STEP_CHANNELS   ProgressStep = "migrateChannelsToSidebarChannels"
-	STEP_END        ProgressStep = "endMigration"
+	StepCategories ProgressStep = "populateSidebarCategories"
+	StepFavorites  ProgressStep = "migrateFavoriteChannelToSidebarChannels"
+	StepDMs        ProgressStep = "migrateDirectMessagesToSidebarChannels"
+	StepChannels   ProgressStep = "migrateChannelsToSidebarChannels"
+	StepEnd        ProgressStep = "endMigration"
 )
 
 type Progress struct {
@@ -55,7 +55,7 @@ func (p *Progress) IsValid() bool {
 	}
 
 	switch p.CurrentStep {
-	case STEP_CATEGORIES, STEP_CHANNELS, STEP_DMS, STEP_FAVORITES:
+	case StepCategories, StepChannels, StepDMs, StepFavorites:
 	default:
 		return false
 	}
@@ -76,7 +76,7 @@ func newProgress(step ProgressStep) *Progress {
 func (worker *Worker) runSidebarCategoriesPhase2Migration(lastDone string) (bool, string, *model.AppError) {
 	var progress *Progress
 	if len(lastDone) == 0 {
-		progress = newProgress(STEP_CATEGORIES)
+		progress = newProgress(StepCategories)
 	} else {
 		progress = ProgressFromJson(strings.NewReader(lastDone))
 		if !progress.IsValid() {
@@ -88,18 +88,18 @@ func (worker *Worker) runSidebarCategoriesPhase2Migration(lastDone string) (bool
 	var err *model.AppError
 	var nextStep ProgressStep
 	switch progress.CurrentStep {
-	case STEP_CATEGORIES:
+	case StepCategories:
 		result, err = worker.app.Srv().Store.Channel().MigrateSidebarCategories(progress.LastTeamId, progress.LastUserId, worker.app.GetT())
-		nextStep = STEP_CHANNELS
-	case STEP_CHANNELS:
+		nextStep = StepChannels
+	case StepChannels:
 		result, err = worker.app.Srv().Store.Channel().MigrateChannelsToSidebarChannels(progress.LastChannelId, progress.LastUserId, progress.LastSortOrder)
-		nextStep = STEP_DMS
-	case STEP_DMS:
+		nextStep = StepDMs
+	case StepDMs:
 		result, err = worker.app.Srv().Store.Channel().MigrateDirectGroupMessagesToSidebarChannels(progress.LastChannelId, progress.LastUserId, progress.LastSortOrder)
-		nextStep = STEP_FAVORITES
-	case STEP_FAVORITES:
+		nextStep = StepFavorites
+	case StepFavorites:
 		result, err = worker.app.Srv().Store.Channel().MigrateFavoritesToSidebarChannels(progress.LastUserId, progress.LastSortOrder)
-		nextStep = STEP_END
+		nextStep = StepEnd
 	}
 
 	if err != nil {
@@ -108,7 +108,7 @@ func (worker *Worker) runSidebarCategoriesPhase2Migration(lastDone string) (bool
 
 	if result == nil {
 		// We haven't progressed. That means that we've reached the end of this stage of the migration, and should now advance to the next stage or stop
-		if nextStep != STEP_END {
+		if nextStep != StepEnd {
 			progress = newProgress(nextStep)
 			return false, progress.ToJson(), nil
 		}

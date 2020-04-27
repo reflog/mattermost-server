@@ -1918,11 +1918,11 @@ func updateCategoryForTeamForUser(c *Context, w http.ResponseWriter, r *http.Req
 	defer c.LogAuditRec(auditRec)
 
 	categoryUpdateRequest, err := model.SidebarCategoryFromJson(r.Body)
-
 	if err != nil {
 		c.SetInvalidParam("category")
 		return
 	}
+
 	if appErr := validateUserChannels("updateCategoryForTeamForUser", c, c.Params.TeamId, c.Params.UserId, categoryUpdateRequest.Channels); appErr != nil {
 		c.Err = appErr
 		return
